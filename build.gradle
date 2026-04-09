@@ -1,0 +1,97 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
+
+group = 'io.justtrack'
+version = findProperty("releaseVersion") ?: '1.0-SNAPSHOT'
+description = 'Shaded Java UDAF jar for StarRocks theta sketch merging'
+
+def githubRepository = 'justtrackio/starrocks'
+def mavenRepoUrl = findProperty("mavenRepoUrl") ?: layout.buildDirectory.dir("maven-repo").get().asFile.absolutePath
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+dependencies {
+    implementation("org.apache.datasketches:datasketches-java:6.2.0")
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.named("shadowJar", ShadowJar) {
+    zip64 = true
+    mergeServiceFiles()
+    archiveBaseName.set("starrocks")
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            artifactId = project.name
+
+            artifact(tasks.named("shadowJar")) {
+                classifier = null
+            }
+            artifact tasks.named("sourcesJar")
+            artifact tasks.named("javadocJar")
+
+            pom {
+                name = project.name
+                description = project.description
+                url = "https://github.com/${githubRepository}"
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:https://github.com/${githubRepository}.git"
+                    developerConnection = "scm:git:git@github.com:${githubRepository}.git"
+                    url = "https://github.com/${githubRepository}"
+                }
+
+                developers {
+                    developer {
+                        id = 'justtrackio'
+                        name = 'justtrack'
+                        url = 'https://github.com/justtrackio'
+                    }
+                }
+            }
+
+            pom.withXml {
+                def root = asNode()
+                root.children()
+                    .findAll { it instanceof Node && it.name() == 'dependencies' }
+                    .each { root.remove(it) }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'publicPages'
+            url = uri(mavenRepoUrl)
+        }
+    }
+}

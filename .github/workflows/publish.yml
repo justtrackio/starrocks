@@ -1,0 +1,101 @@
+name: Publish Maven Repository
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version to publish, for example 1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ inputs.release_version }}"
+          fi
+
+          if [[ -z "${version}" ]]; then
+            echo "release version is required" >&2
+            exit 1
+          fi
+
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare GitHub Pages repository
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git clone --branch gh-pages --depth 1 "${repo_url}" gh-pages-repo
+          else
+            git clone --depth 1 "${repo_url}" gh-pages-repo
+            (
+              cd gh-pages-repo
+              git checkout --orphan gh-pages
+              git rm -rf . >/dev/null 2>&1 || true
+            )
+          fi
+
+          touch gh-pages-repo/.nojekyll
+
+      - name: Run tests and publish shaded artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon clean test publish \
+            -PreleaseVersion="${{ steps.version.outputs.value }}" \
+            -PmavenRepoUrl="${GITHUB_WORKSPACE}/gh-pages-repo"
+
+      - name: Push GitHub Pages updates
+        working-directory: gh-pages-repo
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$(git status --short)" ]]; then
+            echo "No Maven repository changes to publish"
+            exit 0
+          fi
+
+          git add .
+          git commit -m "Publish io.justtrack:starrocks:${{ steps.version.outputs.value }}"
+          git push origin HEAD:gh-pages
