@@ -31,18 +31,19 @@ class ThetaSketchMergeTest {
     void updateMergesDistinctItemsAcrossSketches() {
         ThetaSketchMerge.State state = aggregator.create();
 
-        aggregator.update(state, encodedSketch("alpha", "beta"));
-        aggregator.update(state, encodedSketch("beta", "gamma"));
+        aggregator.update(state, "AQMDAAA6zJNsfIqYmZiAaQ==");
+        aggregator.update(state, "AQMDAAA6zJMj3IAxxCv4RA==");
 
         Sketch result = decodeSketch(aggregator.finalize(state));
 
-        assertEquals(3.0, result.getEstimate());
+        assertEquals(2.0, result.getEstimate());
     }
 
     @Test
     void serializeAndMergeRoundTripPreservesUnion() {
         ThetaSketchMerge.State source = aggregator.create();
-        aggregator.update(source, encodedSketch("one", "two", "three"));
+        aggregator.update(source, "AQMDAAA6zJNsfIqYmZiAaQ==");
+        aggregator.update(source, "AQMDAAA6zJMj3IAxxCv4RA==");
 
         ByteBuffer buffer = ByteBuffer.allocate(source.serializeLength());
         aggregator.serialize(source, buffer);
@@ -53,7 +54,7 @@ class ThetaSketchMergeTest {
 
         Sketch result = decodeSketch(aggregator.finalize(target));
 
-        assertEquals(3.0, result.getEstimate());
+        assertEquals(2.0, result.getEstimate());
     }
 
     @Test

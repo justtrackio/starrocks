@@ -11,12 +11,13 @@ import java.util.Base64;
 
 public class ThetaSketchMerge {
     private static final int NOMINAL_ENTRIES = 16384;
+    private static final int SERIALIZED_STATE_BYTES = Integer.BYTES + Sketch.getMaxCompactSketchBytes(NOMINAL_ENTRIES);
 
     public static class State {
         Union union = SetOperation.builder().setNominalEntries(NOMINAL_ENTRIES).buildUnion();
 
         public int serializeLength() {
-            return Sketch.getMaxCompactSketchBytes(NOMINAL_ENTRIES);
+            return SERIALIZED_STATE_BYTES;
         }
     }
 
@@ -35,18 +36,26 @@ public class ThetaSketchMerge {
     }
 
     public void serialize(State state, ByteBuffer buff) {
-        // DataSketches 6.2.0 uses JDK-internal direct ByteBuffer access that is blocked on Java 17.
-        // Serializing through a byte array keeps heap and direct buffers working across JDKs.
-        buff.put(state.union.getResult().toByteArray());
+        byte[] serialized = state.union.getResult().toByteArray();
+
+        buff.putInt(serialized.length);
+        buff.put(serialized);
+
+        int padding = SERIALIZED_STATE_BYTES - Integer.BYTES - serialized.length;
+        for (int i = 0; i < padding; i++) {
+            buff.put((byte) 0);
+        }
     }
 
     public void merge(State state, ByteBuffer buffer) {
-        ByteBuffer serializedView = buffer.slice();
-        byte[] serialized = new byte[serializedView.remaining()];
-        serializedView.get(serialized);
+        int serializedLength = buffer.getInt();
+        byte[] serialized = new byte[serializedLength];
+        buffer.get(serialized);
 
         state.union.union(Memory.wrap(serialized));
-        buffer.position(buffer.limit());
+
+        int remainingPadding = SERIALIZED_STATE_BYTES - Integer.BYTES - serializedLength;
+        buffer.position(buffer.position() + remainingPadding);
     }
 
     public String finalize(State state) {
