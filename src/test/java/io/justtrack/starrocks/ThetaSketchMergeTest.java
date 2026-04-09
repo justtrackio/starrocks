@@ -69,6 +69,13 @@ class ThetaSketchMergeTest {
     }
 
     @Test
+    void serializeLengthFitsWithinStarRocksVarcharLimit() {
+        ThetaSketchMerge.State state = aggregator.create();
+
+        assertTrue(state.serializeLength() < 65533);
+    }
+
+    @Test
     void mergeConsumesDirectByteBuffer() {
         ThetaSketchMerge.State source = aggregator.create();
         aggregator.update(source, encodedSketch("red", "green", "blue"));

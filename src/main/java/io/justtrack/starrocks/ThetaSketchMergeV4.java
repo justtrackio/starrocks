@@ -9,7 +9,7 @@ import org.apache.datasketches.theta.Union;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
-public class ThetaSketchMerge {
+public class ThetaSketchMergeV4 {
     private static final int NOMINAL_ENTRIES = 4096;
     private static final int SERIALIZED_STATE_BYTES = Integer.BYTES + Sketch.getMaxCompactSketchBytes(NOMINAL_ENTRIES);
 
