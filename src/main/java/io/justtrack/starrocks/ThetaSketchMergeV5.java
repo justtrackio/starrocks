@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-public class ThetaSketchMerge {
+public class ThetaSketchMergeV5 {
     private static final int NOMINAL_ENTRIES = 4096;
     private static final int LENGTH_PREFIX_BYTES = 5;
     private static final int SERIALIZED_STATE_BYTES = LENGTH_PREFIX_BYTES + maxBase64Length(Sketch.getMaxCompactSketchBytes(NOMINAL_ENTRIES));

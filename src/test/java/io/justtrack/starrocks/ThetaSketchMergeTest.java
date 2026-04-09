@@ -76,6 +76,20 @@ class ThetaSketchMergeTest {
     }
 
     @Test
+    void serializedStateUsesAsciiOnlyBytes() {
+        ThetaSketchMerge.State state = aggregator.create();
+        aggregator.update(state, encodedSketch("one", "two", "three"));
+
+        ByteBuffer buffer = ByteBuffer.allocate(state.serializeLength());
+        aggregator.serialize(state, buffer);
+
+        for (int i = 0; i < buffer.position(); i++) {
+            int value = Byte.toUnsignedInt(buffer.get(i));
+            assertTrue(value >= 0x20 && value <= 0x7a);
+        }
+    }
+
+    @Test
     void mergeConsumesDirectByteBuffer() {
         ThetaSketchMerge.State source = aggregator.create();
         aggregator.update(source, encodedSketch("red", "green", "blue"));
