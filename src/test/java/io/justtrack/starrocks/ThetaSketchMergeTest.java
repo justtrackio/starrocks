@@ -58,6 +58,17 @@ class ThetaSketchMergeTest {
     }
 
     @Test
+    void serializeLengthMatchesWrittenStateSize() {
+        ThetaSketchMerge.State state = aggregator.create();
+        aggregator.update(state, encodedSketch("one", "two", "three"));
+
+        ByteBuffer buffer = ByteBuffer.allocate(state.serializeLength());
+        aggregator.serialize(state, buffer);
+
+        assertEquals(state.serializeLength(), buffer.position());
+    }
+
+    @Test
     void mergeConsumesDirectByteBuffer() {
         ThetaSketchMerge.State source = aggregator.create();
         aggregator.update(source, encodedSketch("red", "green", "blue"));

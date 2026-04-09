@@ -9,7 +9,7 @@ import org.apache.datasketches.theta.Union;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
-public class ThetaSketchMerge {
+public class ThetaSketchMergeV3 {
     private static final int NOMINAL_ENTRIES = 16384;
 
     public static class State {
