@@ -57,7 +57,7 @@ class ThetaSketchMergeTest {
     }
 
     @Test
-    void mergeConsumesDirectByteBufferWithoutCopyingThroughHeapArray() {
+    void mergeConsumesDirectByteBuffer() {
         ThetaSketchMerge.State source = aggregator.create();
         aggregator.update(source, encodedSketch("red", "green", "blue"));
 

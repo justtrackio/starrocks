@@ -1,15 +1,12 @@
 package io.justtrack.starrocks;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.theta.CompactSketch;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Sketch;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.Union;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Base64;
 
 public class ThetaSketchMerge {
@@ -38,16 +35,17 @@ public class ThetaSketchMerge {
     }
 
     public void serialize(State state, ByteBuffer buff) {
-        ByteBuffer serializedView = nativeOrderSlice(buff);
-        WritableMemory memory = WritableMemory.writableWrap(serializedView);
-        CompactSketch serialized = state.union.getResult(false, memory);
-
-        buff.position(buff.position() + serialized.getCurrentBytes());
+        // DataSketches 6.2.0 uses JDK-internal direct ByteBuffer access that is blocked on Java 17.
+        // Serializing through a byte array keeps heap and direct buffers working across JDKs.
+        buff.put(state.union.getResult().toByteArray());
     }
 
     public void merge(State state, ByteBuffer buffer) {
-        ByteBuffer serializedView = nativeOrderSlice(buffer);
-        state.union.union(Memory.wrap(serializedView));
+        ByteBuffer serializedView = buffer.slice();
+        byte[] serialized = new byte[serializedView.remaining()];
+        serializedView.get(serialized);
+
+        state.union.union(Memory.wrap(serialized));
         buffer.position(buffer.limit());
     }
 
@@ -55,9 +53,5 @@ public class ThetaSketchMerge {
         byte[] result = state.union.getResult().toByteArray();
 
         return Base64.getEncoder().encodeToString(result);
-    }
-
-    private static ByteBuffer nativeOrderSlice(ByteBuffer buffer) {
-        return buffer.slice().order(ByteOrder.nativeOrder());
     }
 }
