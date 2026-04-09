@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.justtrack</groupId>
+  <artifactId>starrocks</artifactId>
+  <version>1.0.0</version>
+  <name>starrocks</name>
+  <description>Shaded Java UDAF jar for StarRocks theta sketch merging</description>
+  <url>https://github.com/justtrackio/starrocks</url>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>justtrackio</id>
+      <name>justtrack</name>
+      <url>https://github.com/justtrackio</url>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://github.com/justtrackio/starrocks.git</connection>
+    <developerConnection>scm:git:git@github.com:justtrackio/starrocks.git</developerConnection>
+    <url>https://github.com/justtrackio/starrocks</url>
+  </scm>
+</project>
