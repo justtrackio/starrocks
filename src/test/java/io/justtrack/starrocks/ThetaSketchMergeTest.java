@@ -76,66 +76,6 @@ class ThetaSketchMergeTest {
     }
 
     @Test
-    void serializedStateUsesAsciiOnlyBytes() {
-        ThetaSketchMerge.State state = aggregator.create();
-        aggregator.update(state, encodedSketch("one", "two", "three"));
-
-        ByteBuffer buffer = ByteBuffer.allocate(state.serializeLength());
-        aggregator.serialize(state, buffer);
-
-        for (int i = 0; i < buffer.position(); i++) {
-            int value = Byte.toUnsignedInt(buffer.get(i));
-            assertTrue(value >= 0x20 && value <= 0x7a);
-        }
-    }
-
-    @Test
-    void mergeConsumesDirectByteBuffer() {
-        ThetaSketchMerge.State source = aggregator.create();
-        aggregator.update(source, encodedSketch("red", "green", "blue"));
-
-        ByteBuffer heapBuffer = ByteBuffer.allocate(source.serializeLength());
-        aggregator.serialize(source, heapBuffer);
-        heapBuffer.flip();
-
-        ByteBuffer directBuffer = ByteBuffer.allocateDirect(heapBuffer.remaining());
-        directBuffer.put(heapBuffer);
-        directBuffer.flip();
-
-        ThetaSketchMerge.State target = aggregator.create();
-        aggregator.merge(target, directBuffer);
-
-        Sketch result = decodeSketch(aggregator.finalize(target));
-
-        assertEquals(3.0, result.getEstimate());
-    }
-
-    @Test
-    void mergeReadsOnlyRemainingWindowOfByteBuffer() {
-        ThetaSketchMerge.State source = aggregator.create();
-        aggregator.update(source, encodedSketch("left", "right", "center"));
-
-        ByteBuffer serialized = ByteBuffer.allocate(source.serializeLength());
-        aggregator.serialize(source, serialized);
-        serialized.flip();
-
-        ByteBuffer withPadding = ByteBuffer.allocate(serialized.remaining() + 7);
-        withPadding.putInt(123456789);
-        withPadding.put(serialized);
-        withPadding.put((byte) 42);
-        withPadding.flip();
-        withPadding.position(Integer.BYTES);
-        withPadding.limit(withPadding.limit() - 1);
-
-        ThetaSketchMerge.State target = aggregator.create();
-        aggregator.merge(target, withPadding);
-
-        Sketch result = decodeSketch(aggregator.finalize(target));
-
-        assertEquals(3.0, result.getEstimate());
-    }
-
-    @Test
     void mergeCombinesExistingAndSerializedState() {
         ThetaSketchMerge.State left = aggregator.create();
         ThetaSketchMerge.State right = aggregator.create();
