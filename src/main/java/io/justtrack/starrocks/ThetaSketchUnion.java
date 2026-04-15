@@ -9,14 +9,14 @@ import org.apache.datasketches.theta.Union;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
-public class ThetaSketchMerge {
+public class ThetaSketchUnion {
     private static final int NOMINAL_ENTRIES = 4096;
 
     public static class State {
         Union union = SetOperation.builder().setNominalEntries(NOMINAL_ENTRIES).buildUnion();
 
         public int serializeLength() {
-            return union.getResult().getCompactBytes();
+            return 4 + union.getResult().getCompactBytes();
         }
     }
 
@@ -27,9 +27,8 @@ public class ThetaSketchMerge {
     public void destroy(State state) {
     }
 
-    public final void update(State state, String val) {
-        byte[] decoded = Base64.getDecoder().decode(val);
-        Sketch sketch = Sketches.wrapSketch(Memory.wrap(decoded));
+    public final void update(State state, byte[] val) {
+        Sketch sketch = Sketches.wrapSketch(Memory.wrap(val));
 
         state.union.union(sketch);
     }
@@ -37,16 +36,19 @@ public class ThetaSketchMerge {
     public void serialize(State state, ByteBuffer buff) {
         byte[] serialized = state.union.getResult().toByteArray();
 
+        buff.putInt(serialized.length);
         buff.put(serialized);
     }
 
     public void merge(State state, ByteBuffer buffer) {
-        state.union.union(Memory.wrap(buffer.array()));
+        int len = buffer.getInt();
+        byte[] bytes = new byte[len];
+        buffer.get(bytes);
+
+        state.union.union(Memory.wrap(bytes));
     }
 
-    public String finalize(State state) {
-        byte[] result = state.union.getResult().toByteArray();
-
-        return Base64.getEncoder().encodeToString(result);
+    public byte[] finalize(State state) {
+        return state.union.getResult().toByteArray();
     }
 }
