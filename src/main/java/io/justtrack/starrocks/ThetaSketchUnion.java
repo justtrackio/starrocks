@@ -46,7 +46,8 @@ public class ThetaSketchUnion {
         byte[] bytes = new byte[len];
         buffer.get(bytes);
 
-        state.union.union(Memory.wrap(bytes));
+        Sketch sketch = Sketches.wrapSketch(Memory.wrap(bytes));
+        state.union.union(sketch);
     }
 
     public String finalize(State state) {
