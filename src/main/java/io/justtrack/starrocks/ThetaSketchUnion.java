@@ -27,8 +27,9 @@ public class ThetaSketchUnion {
     public void destroy(State state) {
     }
 
-    public final void update(State state, byte[] val) {
-        Sketch sketch = Sketches.wrapSketch(Memory.wrap(val));
+    public final void update(State state, String val) {
+        byte[] decoded = Base64.getDecoder().decode(val);
+        Sketch sketch = Sketches.wrapSketch(Memory.wrap(decoded));
 
         state.union.union(sketch);
     }
@@ -48,7 +49,9 @@ public class ThetaSketchUnion {
         state.union.union(Memory.wrap(bytes));
     }
 
-    public byte[] finalize(State state) {
-        return state.union.getResult().toByteArray();
+    public String finalize(State state) {
+        byte[] result = state.union.getResult().toByteArray();
+
+        return Base64.getEncoder().encodeToString(result);
     }
 }

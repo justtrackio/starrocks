@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ThetaSketchUnionTest {
@@ -21,7 +22,7 @@ class ThetaSketchUnionTest {
 
         assertTrue(state.serializeLength() > 0);
 
-        Sketch result = Sketches.wrapSketch(Memory.wrap(aggregator.finalize(state)));
+        Sketch result = decodeSketch(aggregator.finalize(state));
 
         assertEquals(0.0, result.getEstimate());
     }
@@ -30,10 +31,10 @@ class ThetaSketchUnionTest {
     void updateMergesDistinctItemsAcrossSketches() {
         ThetaSketchUnion.State state = aggregator.create();
 
-        aggregator.update(state, fromBase64("AQMDAAA6zJNsfIqYmZiAaQ=="));
-        aggregator.update(state, fromBase64("AQMDAAA6zJMj3IAxxCv4RA=="));
+        aggregator.update(state, "AQMDAAA6zJNsfIqYmZiAaQ==");
+        aggregator.update(state, "AQMDAAA6zJMj3IAxxCv4RA==");
 
-        Sketch result = Sketches.wrapSketch(Memory.wrap(aggregator.finalize(state)));
+        Sketch result = decodeSketch(aggregator.finalize(state));
 
         assertEquals(2.0, result.getEstimate());
     }
@@ -41,8 +42,8 @@ class ThetaSketchUnionTest {
     @Test
     void serializeAndMergeRoundTripPreservesUnion() {
         ThetaSketchUnion.State source = aggregator.create();
-        aggregator.update(source, fromBase64("AQMDAAA6zJNsfIqYmZiAaQ=="));
-        aggregator.update(source, fromBase64("AQMDAAA6zJMj3IAxxCv4RA=="));
+        aggregator.update(source, "AQMDAAA6zJNsfIqYmZiAaQ==");
+        aggregator.update(source, "AQMDAAA6zJMj3IAxxCv4RA==");
 
         ByteBuffer buffer = ByteBuffer.allocate(source.serializeLength());
         aggregator.serialize(source, buffer);
@@ -51,7 +52,7 @@ class ThetaSketchUnionTest {
         ThetaSketchUnion.State target = aggregator.create();
         aggregator.merge(target, buffer);
 
-        Sketch result = Sketches.wrapSketch(Memory.wrap(aggregator.finalize(target)));
+        Sketch result = decodeSketch(aggregator.finalize(target));
 
         assertEquals(2.0, result.getEstimate());
     }
@@ -88,26 +89,29 @@ class ThetaSketchUnionTest {
 
         aggregator.merge(left, buffer);
 
-        Sketch result = Sketches.wrapSketch(Memory.wrap(aggregator.finalize(left)));
+        Sketch result = decodeSketch(aggregator.finalize(left));
 
         assertEquals(4.0, result.getEstimate());
     }
 
-    private static byte[] encodedSketch(String... values) {
+    @Test
+    void updateRejectsMalformedBase64() {
+        ThetaSketchUnion.State state = aggregator.create();
+
+        assertThrows(IllegalArgumentException.class, () -> aggregator.update(state, "not-base64"));
+    }
+
+    private static String encodedSketch(String... values) {
         UpdateSketch sketch = UpdateSketch.builder().build();
         for (String value : values) {
             sketch.update(value);
         }
 
-        return sketch.compact().toByteArray();
+        return Base64.getEncoder().encodeToString(sketch.compact().toByteArray());
     }
 
     private static Sketch decodeSketch(String encodedSketch) {
         byte[] bytes = Base64.getDecoder().decode(encodedSketch);
         return Sketches.wrapSketch(Memory.wrap(bytes));
-    }
-
-    private static byte[] fromBase64(String encodedSketch) {
-        return Base64.getDecoder().decode(encodedSketch);
     }
 }
